@@ -17,7 +17,13 @@
 #include <linux/usb.h>
 #include <linux/usb/cdc.h>
 #include <linux/usb/usbnet.h>
+#include <linux/string.h>
+#include <linux/if_ether.h>
 
+#define ETH_ALEN_STRLEN (3 * ETH_ALEN + 1)
+static char zte_mac_base[ETH_ALEN_STRLEN];
+module_param_string(zte_mac_base, zte_mac_base, ETH_ALEN_STRLEN, S_IRUGO);
+MODULE_PARM_DESC(zte_mac_base, "MAC Address for broken ZTE devices (else random)");
 
 #if IS_ENABLED(CONFIG_USB_NET_RNDIS_HOST)
 
@@ -454,7 +460,8 @@ static int usbnet_cdc_zte_bind(struct usbnet *dev, struct usb_interface *intf)
 	int status = usbnet_cdc_bind(dev, intf);
 
 	if (!status && (dev->net->dev_addr[0] & 0x02))
-		eth_hw_addr_random(dev->net);
+		if (!strlen(zte_mac_base) || !mac_pton(zte_mac_base, dev->net->dev_addr))
+			eth_hw_addr_random(dev->net);
 
 	return status;
 }
