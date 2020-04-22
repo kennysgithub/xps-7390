@@ -1623,6 +1623,7 @@ static void psr_alpm_check(struct intel_dp *intel_dp)
 	struct drm_i915_private *dev_priv = dp_to_i915(intel_dp);
 	struct drm_dp_aux *aux = &intel_dp->aux;
 	struct i915_psr *psr = &dev_priv->psr;
+	static unsigned long psr_alpm_err_time;
 	u8 val;
 	int r;
 
@@ -1636,13 +1637,19 @@ static void psr_alpm_check(struct intel_dp *intel_dp)
 	}
 
 	if (val & DP_ALPM_LOCK_TIMEOUT_ERROR) {
-		intel_psr_disable_locked(intel_dp);
-		psr->sink_not_reliable = true;
-		drm_dbg_kms(&dev_priv->drm,
+		if ((i915_modparams.enable_psr < 2) || (jiffies < psr_alpm_err_time)) {
+			intel_psr_disable_locked(intel_dp);
+			psr->sink_not_reliable = true;
+			drm_info(&dev_priv->drm,
 			    "ALPM lock timeout error, disabling PSR\n");
+		} else {
+			drm_info(&dev_priv->drm,
+			    "last ALPM lock timeout error > .5 sec, attempting to retain PSR\n");
+			psr_alpm_err_time = jiffies + (HZ / 2);
+		};
 
 		/* Clearing error */
-		drm_dp_dpcd_writeb(aux, DP_RECEIVER_ALPM_STATUS, val);
+		drm_dp_dpcd_writeb(aux, DP_RECEIVER_ALPM_STATUS, val & DP_ALPM_LOCK_TIMEOUT_ERROR);
 	}
 }
 
