@@ -14,6 +14,13 @@
 #include <linux/usb/cdc.h>
 #include <linux/usb/usbnet.h>
 #include <linux/usb/rndis_host.h>
+#include <linux/string.h>
+#include <linux/if_ether.h>
+
+#define ETH_ALEN_STRLEN (3 * ETH_ALEN + 1)
+static char rndis_mac_base[ETH_ALEN_STRLEN];
+module_param_string(rndis_mac_base, rndis_mac_base, ETH_ALEN_STRLEN, S_IRUGO);
+MODULE_PARM_DESC(rndis_mac_base, "MAC Address for broken RNDIS devices (else random)");
 
 
 /*
@@ -418,8 +425,10 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 		goto halt_fail_and_release;
 	}
 
-	if (bp[0] & 0x02)
-		eth_hw_addr_random(net);
+	if (bp[0] & 0x02) {
+		if (!strlen(rndis_mac_base) || !mac_pton(rndis_mac_base, net->dev_addr))
+			eth_hw_addr_random(net);
+	}
 	else
 		ether_addr_copy(net->dev_addr, bp);
 
