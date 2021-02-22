@@ -1642,6 +1642,7 @@ static void intel_psr_handle_irq(struct drm_i915_private *dev_priv)
 
 	intel_psr_disable_locked(psr->dp);
 	psr->sink_not_reliable = true;
+	drm_err(&dev_priv->drm, "%s(): disabled PSR\n", __func__);
 	/* let's make sure that sink is awaken */
 	drm_dp_dpcd_writeb(&psr->dp->aux, DP_SET_POWER, DP_SET_POWER_D0);
 }
@@ -1881,6 +1882,7 @@ static void psr_alpm_check(struct intel_dp *intel_dp)
 			drm_info(&dev_priv->drm,
 			    "last ALPM lock timeout error > .5 sec, attempting to retain PSR\n");
 			psr_alpm_err_time = jiffies + (HZ / 2);
+			psr->sink_not_reliable = false;
 		};
 
 		/* Clearing error */
