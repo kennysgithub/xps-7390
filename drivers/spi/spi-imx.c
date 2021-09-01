@@ -505,7 +505,9 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 				      struct spi_message *msg)
 {
 	struct spi_device *spi = msg->spi;
+	struct spi_transfer *xfer;
 	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
+	u32 min_speed_hz = ~0U;
 	u32 testreg, delay;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
 
@@ -577,9 +579,21 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	 * be asserted before the SCLK polarity changes, which would disrupt
 	 * the SPI communication as the device on the other end would consider
 	 * the change of SCLK polarity as a clock tick already.
+	 *
+	 * Because spi_imx->spi_bus_clk is only set in bitbang prepare_message
+	 * callback, iterate over all the transfers in spi_message, find the
+	 * one with lowest bus frequency, and use that bus frequency for the
+	 * delay calculation. In case all transfers have speed_hz == 0, then
+	 * min_speed_hz is ~0 and the resulting delay is zero.
 	 */
-	delay = (2 * 1000000) / spi_imx->spi_bus_clk;
-	if (likely(delay < 10))	/* SCLK is faster than 100 kHz */
+	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
+		if (!xfer->speed_hz)
+			continue;
+		min_speed_hz = min(xfer->speed_hz, min_speed_hz);
+	}
+
+	delay = (2 * 1000000) / min_speed_hz;
+	if (likely(delay < 10))	/* SCLK is faster than 200 kHz */
 		udelay(delay);
 	else			/* SCLK is _very_ slow */
 		usleep_range(delay, delay + 10);
@@ -1038,12 +1052,8 @@ static void spi_imx_set_burst_len(struct spi_imx_data *spi_imx, int n_bits)
 
 static void spi_imx_push(struct spi_imx_data *spi_imx)
 {
-	unsigned int burst_len, fifo_words;
+	unsigned int burst_len;
 
-	if (spi_imx->dynamic_burst)
-		fifo_words = 4;
-	else
-		fifo_words = spi_imx_bytes_per_word(spi_imx->bits_per_word);
 	/*
 	 * Reload the FIFO when the remaining bytes to be transferred in the
 	 * current burst is 0. This only applies when bits_per_word is a
@@ -1062,7 +1072,7 @@ static void spi_imx_push(struct spi_imx_data *spi_imx)
 
 			spi_imx->remainder = burst_len;
 		} else {
-			spi_imx->remainder = fifo_words;
+			spi_imx->remainder = spi_imx_bytes_per_word(spi_imx->bits_per_word);
 		}
 	}
 
@@ -1070,8 +1080,7 @@ static void spi_imx_push(struct spi_imx_data *spi_imx)
 		if (!spi_imx->count)
 			break;
 		if (spi_imx->dynamic_burst &&
-		    spi_imx->txfifo >= DIV_ROUND_UP(spi_imx->remainder,
-						     fifo_words))
+		    spi_imx->txfifo >= DIV_ROUND_UP(spi_imx->remainder, 4))
 			break;
 		spi_imx->tx(spi_imx);
 		spi_imx->txfifo++;
@@ -1181,6 +1190,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	 * dynamic_burst in that case.
 	 */
 	if (spi_imx->devtype_data->dynamic_burst && !spi_imx->slave_mode &&
+	    !(spi->mode & SPI_CS_WORD) &&
 	    (spi_imx->bits_per_word == 8 ||
 	    spi_imx->bits_per_word == 16 ||
 	    spi_imx->bits_per_word == 32)) {
@@ -1615,6 +1625,15 @@ static int spi_imx_probe(struct platform_device *pdev)
 	if (is_imx35_cspi(spi_imx) || is_imx51_ecspi(spi_imx) ||
 	    is_imx53_ecspi(spi_imx))
 		spi_imx->bitbang.master->mode_bits |= SPI_LOOP | SPI_READY;
+
+	if (is_imx51_ecspi(spi_imx) &&
+	    device_property_read_u32(&pdev->dev, "cs-gpios", NULL))
+		/*
+		 * When using HW-CS implementing SPI_CS_WORD can be done by just
+		 * setting the burst length to the word size. This is
+		 * considerably faster than manually controlling the CS.
+		 */
+		spi_imx->bitbang.master->mode_bits |= SPI_CS_WORD;
 
 	spi_imx->spi_drctl = spi_drctl;
 

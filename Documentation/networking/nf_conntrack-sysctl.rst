@@ -184,6 +184,13 @@ nf_conntrack_gre_timeout_stream - INTEGER (seconds)
 	This extended timeout will be used in case there is an GRE stream
 	detected.
 
+nf_hooks_lwtunnel - BOOLEAN
+	- 0 - disabled (default)
+	- not 0 - enabled
+
+	If this option is enabled, the lightweight tunnel netfilter hooks are
+	enabled. This option cannot be disabled once it is enabled.
+
 nf_flowtable_tcp_timeout - INTEGER (seconds)
         default 30
 
@@ -191,19 +198,9 @@ nf_flowtable_tcp_timeout - INTEGER (seconds)
         TCP connections may be offloaded from nf conntrack to nf flow table.
         Once aged, the connection is returned to nf conntrack with tcp pickup timeout.
 
-nf_flowtable_tcp_pickup - INTEGER (seconds)
-        default 120
-
-        TCP connection timeout after being aged from nf flow table offload.
-
 nf_flowtable_udp_timeout - INTEGER (seconds)
         default 30
 
         Control offload timeout for udp connections.
         UDP connections may be offloaded from nf conntrack to nf flow table.
         Once aged, the connection is returned to nf conntrack with udp pickup timeout.
-
-nf_flowtable_udp_pickup - INTEGER (seconds)
-        default 30
-
-        UDP connection timeout after being aged from nf flow table offload.
