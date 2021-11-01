@@ -2,8 +2,8 @@
 VERSION = 5
 PATCHLEVEL = 15
 SUBLEVEL = 0
-EXTRAVERSION = -rc7
-NAME = Opossums on Parade
+EXTRAVERSION =
+NAME = Trick or Treat
 
 LLVM=1
 LLVM_IAS=1
