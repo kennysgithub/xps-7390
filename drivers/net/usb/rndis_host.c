@@ -430,7 +430,7 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 			eth_hw_addr_random(net);
 	}
 	else
-		ether_addr_copy(net->dev_addr, bp);
+		eth_hw_addr_set(net, bp);
 
 	/* set a nonzero filter to enable data transfers */
 	memset(u.set, 0, sizeof *u.set);
