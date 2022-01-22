@@ -472,9 +472,13 @@ static int usbnet_cdc_zte_bind(struct usbnet *dev, struct usb_interface *intf)
 {
 	int status = usbnet_cdc_bind(dev, intf);
 
-	if (!status && (dev->net->dev_addr[0] & 0x02))
-		if (!strlen(zte_mac_base) || !mac_pton(zte_mac_base, (u8 *)dev->net->dev_addr))
+	if (!status && (dev->net->dev_addr[0] & 0x02)) {
+		u8 mac_addr[ETH_ALEN];
+		if (!strlen(zte_mac_base) || !mac_pton(zte_mac_base, mac_addr))
+			eth_hw_addr_set(dev->net, mac_addr);
+		else
 			eth_hw_addr_random(dev->net);
+	}
 
 	return status;
 }

@@ -426,7 +426,10 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 	}
 
 	if (bp[0] & 0x02) {
-		if (!strlen(rndis_mac_base) || !mac_pton(rndis_mac_base, (u8 *)net->dev_addr))
+		u8 mac_addr[ETH_ALEN];
+		if (strlen(rndis_mac_base) && mac_pton(rndis_mac_base, mac_addr))
+			eth_hw_addr_set(net, mac_addr);
+		else
 			eth_hw_addr_random(net);
 	}
 	else
