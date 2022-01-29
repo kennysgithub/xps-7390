@@ -9,6 +9,8 @@
 #include <net/bluetooth/hci_core.h>
 #include <net/bluetooth/mgmt.h>
 
+#include <asm/unaligned.h>
+
 #include "eir.h"
 
 #define PNP_INFO_SVCLASS_ID		0x1200
