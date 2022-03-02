@@ -6435,10 +6435,10 @@ static int ftrace_process_locs(struct module *mod,
 
 	/*
 	 * Sorting mcount in vmlinux at build time depend on
-	 * CONFIG_BUILDTIME_TABLE_SORT, while mcount loc in
+	 * CONFIG_BUILDTIME_MCOUNT_SORT, while mcount loc in
 	 * modules can not be sorted at build time.
 	 */
-	if (!IS_ENABLED(CONFIG_BUILDTIME_TABLE_SORT) || mod) {
+	if (!IS_ENABLED(CONFIG_BUILDTIME_MCOUNT_SORT) || mod) {
 		sort(start, count, sizeof(*start),
 		     ftrace_cmp_ips, NULL);
 	} else {
@@ -7191,7 +7191,6 @@ static int __init ftrace_nodyn_init(void)
 core_initcall(ftrace_nodyn_init);
 
 static inline int ftrace_init_dyn_tracefs(struct dentry *d_tracer) { return 0; }
-static inline void ftrace_startup_enable(int command) { }
 static inline void ftrace_startup_all(int command) { }
 
 # define ftrace_startup_sysctl()	do { } while (0)
